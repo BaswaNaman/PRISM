@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRISM Product Intelligence — Multi-Source Ingestion & Validation Engine</title>
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="dark-theme">
+
+  <!-- Background Grid Glow Effect -->
+  <div class="bg-glow-container">
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+  </div>
+
+  <!-- Top Navigation Bar -->
+  <header class="top-header">
+    <div class="logo-group">
+      <div class="logo-icon">
+        <i class="fa-solid fa-cube"></i>
+      </div>
+      <div>
+        <h1 class="logo-title">PRISM <span>Intelligence</span></h1>
+        <p class="logo-subtitle">Multi-Source Ingestion, Enrichment & Validation Engine</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="status-indicator">
+        <span class="pulse-dot"></span>
+        <span class="status-text">Engine Online</span>
+      </div>
+      
+      <button class="btn btn-outline" id="theme-toggle-btn" title="Toggle Light/Dark Theme">
+        <i class="fa-solid fa-moon"></i>
+      </button>
+
+      <button class="btn btn-secondary" id="reset-db-btn" title="Reset Demo Database">
+        <i class="fa-solid fa-rotate-left"></i> Reset Demo Data
+      </button>
+    </div>
+  </header>
+
+  <main class="app-container">
+    
+    <!-- Hero / KPI Banner -->
+    <section class="kpi-banner">
+      <div class="kpi-card">
+        <div class="kpi-icon icon-blue"><i class="fa-solid fa-boxes-stacked"></i></div>
+        <div class="kpi-info">
+          <span class="kpi-value" id="kpi-total-products">0</span>
+          <span class="kpi-label">Processed Products</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon icon-green"><i class="fa-solid fa-shield-check"></i></div>
+        <div class="kpi-info">
+          <span class="kpi-value" id="kpi-verification-rate">0%</span>
+          <span class="kpi-label">Verification Accuracy</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon icon-amber"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="kpi-info">
+          <span class="kpi-value" id="kpi-flagged-count">0</span>
+          <span class="kpi-label">Flagged Review Queue</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon icon-purple"><i class="fa-solid fa-bolt"></i></div>
+        <div class="kpi-info">
+          <span class="kpi-value" id="kpi-time-saved">0 hrs</span>
+          <span class="kpi-label">Manual Effort Saved</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="tab-enrichment">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> 1. Multi-Source Enrichment Pipeline
+      </button>
+      <button class="tab-btn" data-tab="tab-review-queue">
+        <i class="fa-solid fa-clipboard-check"></i> 2. Human Review Queue <span class="badge badge-warning" id="tab-review-badge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-catalog">
+        <i class="fa-solid fa-table-list"></i> 3. Product Catalog
+      </button>
+      <button class="tab-btn" data-tab="tab-commerce">
+        <i class="fa-solid fa-file-invoice"></i> 4. Commerce Output & Compliance
+      </button>
+      <button class="tab-btn" data-tab="tab-rules">
+        <i class="fa-solid fa-microchip"></i> 5. Validation Rules & Schema
+      </button>
+    </nav>
+
+    <!-- TAB 1: LIVE ENRICHMENT PIPELINE -->
+    <section class="tab-content active" id="tab-enrichment">
+      
+      <div class="pipeline-grid">
+        
+        <!-- Left Panel: Input Ingestion Modes -->
+        <div class="panel panel-input">
+          
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-cloud-arrow-down"></i> Source Data Ingestion</h3>
+            <span class="badge badge-purple" id="current-mode-badge"><i class="fa-solid fa-link"></i> Web URL Ingest</span>
+          </div>
+
+          <!-- Input Source Mode Selector Tabs -->
+          <div class="ingestion-mode-nav">
+            <button class="mode-btn active" data-mode="url">
+              <i class="fa-solid fa-globe"></i> 1. Fetch Web URL
+            </button>
+            <button class="mode-btn" data-mode="pdf">
+              <i class="fa-solid fa-file-pdf"></i> 2. Upload PDF Spec
+            </button>
+            <button class="mode-btn" data-mode="manual">
+              <i class="fa-solid fa-paste"></i> 3. Paste Raw Text
+            </button>
+            <button class="mode-btn" data-mode="discover">
+              <i class="fa-solid fa-magnifying-glass"></i> 4. Discover from Sparse Data
+            </button>
+          </div>
+
+          <!-- MODE 1: WEB URL INGESTION -->
+          <div class="mode-container active" id="mode-container-url">
+            <div class="form-group">
+              <label for="url-input-text">Enter Live Product Webpage URL:</label>
+              <div class="input-with-icon">
+                <i class="fa-solid fa-link input-icon"></i>
+                <input type="url" id="url-input-text" placeholder="https://www.automationdirect.com/adc/shopping/catalog/sensors..." />
+              </div>
+            </div>
+
+            <!-- Preset Sample URLs Chips -->
+            <div class="preset-section">
+              <span class="preset-label"><i class="fa-solid fa-globe"></i> Try Real Web URLs:</span>
+              <div class="preset-chips" id="preset-urls-container">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- MODE 2: PDF SPEC SHEET UPLOAD -->
+          <div class="mode-container" id="mode-container-pdf">
+            <div class="form-group">
+              <label>Upload PDF Catalog or Datasheet File (.pdf):</label>
+              <div class="dropzone" id="pdf-dropzone">
+                <i class="fa-solid fa-file-arrow-up dropzone-icon"></i>
+                <p>Drag & Drop your spec sheet PDF here or <span class="dropzone-link">Browse File</span></p>
+                <input type="file" id="pdf-file-input" accept=".pdf" class="hidden" />
+                <div class="file-preview hidden" id="pdf-file-preview">
+                  <i class="fa-solid fa-file-pdf icon-pdf"></i>
+                  <span id="pdf-filename">datasheet.pdf</span>
+                  <span class="badge badge-info" id="pdf-filesize">0 KB</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODE 3: MANUAL TEXT PASTE -->
+          <div class="mode-container" id="mode-container-manual">
+            <div class="form-group">
+              <label for="raw-input-text">Paste Raw Product Text or Spec Sheet Excerpt:</label>
+              <textarea id="raw-input-text" rows="8" placeholder="e.g. Phoenix Contact M12 A-Coded 4-position male straight connector. Rated voltage: 250V AC/DC, max current: 4.0 Amps. IP67 ingress protection rating..."></textarea>
+              <div class="text-meta-row">
+                <span class="badge badge-neutral" id="input-char-count">0 chars</span>
+              </div>
+            </div>
+
+            <!-- Sample Manual Datasets Chips -->
+            <div class="preset-section">
+              <span class="preset-label"><i class="fa-solid fa-vial"></i> Sample Blurbs:</span>
+              <div class="preset-chips" id="preset-chips-container">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- MODE 4: SPARSE PRODUCT DISCOVERY -->
+          <div class="mode-container" id="mode-container-discover">
+            <div class="form-group">
+              <label for="discover-mpn">Manufacturer Part Number (MPN):</label>
+              <input type="text" id="discover-mpn" placeholder="e.g. DCB518ASTS06G" />
+            </div>
+
+            <div class="form-group">
+              <label for="discover-description">Sparse Part Description:</label>
+              <textarea id="discover-description" rows="3" placeholder="e.g. DCB518ASTS06G Diablo 1/2&quot;x18&quot; - Sanding Belt 6pc"></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="discover-manufacturer">Manufacturer:</label>
+                <input type="text" id="discover-manufacturer" placeholder="e.g. Freud Inc" />
+              </div>
+              <div class="form-group flex-1">
+                <label for="discover-brand">Brand (Optional):</label>
+                <input type="text" id="discover-brand" placeholder="e.g. Diablo" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Common Hints Controls (used by URL / PDF / Manual modes) -->
+          <div class="form-row" style="margin-top: 1rem;">
+            <div class="form-group flex-1">
+              <label for="product-name-hint">Product Name (Optional Hint):</label>
+              <input type="text" id="product-name-hint" placeholder="e.g. M12 4-Pin Male Connector" />
+            </div>
+            <div class="form-group flex-1">
+              <label for="category-hint">Category Scope:</label>
+              <select id="category-hint">
+                <option value="Industrial Connector">Industrial Connector</option>
+                <option value="Industrial Sensor">Industrial Sensor</option>
+                <option value="Auto-Detect">Auto-Detect Category</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="panel-actions">
+            <button class="btn btn-clear" id="clear-input-btn"><i class="fa-solid fa-trash-can"></i> Clear</button>
+            <button class="btn btn-primary btn-glow" id="enrich-submit-btn">
+              <i class="fa-solid fa-microchip-ai"></i> Run Product Intelligence Pipeline
+            </button>
+          </div>
+
+          <!-- Pipeline Progress Animation -->
+          <div class="pipeline-progress hidden" id="pipeline-progress">
+            <div class="stage stage-1 active"><i class="fa-solid fa-spinner fa-spin"></i> 1. Fetching & Parsing Source (Web Browser Request)</div>
+            <div class="stage stage-2"><i class="fa-solid fa-spinner fa-spin"></i> 2. AI Structured Extraction</div>
+            <div class="stage stage-3"><i class="fa-solid fa-spinner fa-spin"></i> 3. Deterministic Unit Normalization & Rules</div>
+            <div class="stage stage-4"><i class="fa-solid fa-spinner fa-spin"></i> 4. Multi-Source Evidence & Explainability Indexing</div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Enriched Result Record -->
+        <div class="panel panel-output" id="output-panel">
+          <div class="empty-state" id="output-empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-sparkles"></i></div>
+            <h3>Multi-Source Product Intelligence Ready</h3>
+            <p>Paste a web page URL, upload a PDF datasheet, or select a sample blurb to run real-time AI enrichment, validation, and source traceability.</p>
+          </div>
+
+          <!-- Sparse discovery can safely stop before extraction when identity/source checks fail -->
+          <div class="fetch-warning-banner hidden" id="discovery-failure-card" style="margin-bottom:1rem;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <div>
+              <strong>Discovery Needs Review</strong>
+              <div id="discovery-failure-reason" style="margin-top:0.35rem;"></div>
+              <div id="discovery-failure-detail" style="margin-top:0.35rem; opacity:0.8;"></div>
+            </div>
+          </div>
+
+          <!-- RAW INGESTED CONTENT PREVIEW PANEL -->
+          <div class="fetch-preview-card hidden" id="fetch-preview-card">
+            <div class="fetch-preview-header">
+              <div class="fetch-title-group">
+                <i class="fa-solid fa-file-code icon-preview"></i>
+                <div>
+                  <h4 id="preview-page-title">Scraped Page Title</h4>
+                  <span class="preview-origin-sub" id="preview-origin-sub">URL: domain.com</span>
+                </div>
+              </div>
+              <div class="fetch-badges-group">
+                <span class="badge badge-success" id="preview-http-status">HTTP 200 OK</span>
+                <span class="badge badge-purple" id="preview-content-length">15,171 chars</span>
+              </div>
+            </div>
+
+            <!-- Fetch Warning Alert Banner -->
+            <div class="fetch-warning-banner hidden" id="preview-warning-banner">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span id="preview-warning-text">Fetch warning: Content sparse or blocked by target server.</span>
+            </div>
+
+            <!-- Scrollable Text Preview -->
+            <div class="preview-text-box">
+              <div class="preview-text-label"><i class="fa-solid fa-eye"></i> Raw Scraped Text Preview (First 1,000 characters):</div>
+              <pre class="preview-pre" id="preview-text-content">Raw scraped content will appear here...</pre>
+            </div>
+          </div>
+
+          <!-- Product Enriched Header -->
+          <div class="enriched-card hidden" id="enriched-card">
+            
+            <div class="card-top-bar">
+              <div>
+                <h2 id="out-product-name">Product Name Loading...</h2>
+                <div class="tags-row">
+                  <span class="badge badge-purple" id="out-category">Industrial Category</span>
+                  <span class="badge badge-info" id="out-source-origin"><i class="fa-solid fa-globe"></i> URL: Web Page</span>
+                  <span class="badge badge-neutral" id="out-product-id">ID: sample_1</span>
+                </div>
+              </div>
+
+              <div class="overall-status-box" id="out-overall-status-box">
+                <div class="overall-status-badge" id="out-overall-status">NEEDS REVIEW</div>
+                <div class="confidence-gauge">
+                  <span class="gauge-label">Avg Extraction Confidence</span>
+                  <span class="gauge-value" id="out-overall-confidence">85%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Field Count Summary Bar -->
+            <div class="field-summary-bar">
+              <div class="summary-pill green"><i class="fa-solid fa-circle-check"></i> <span id="out-verified-count">0</span> Verified</div>
+              <div class="summary-pill yellow"><i class="fa-solid fa-triangle-exclamation"></i> <span id="out-flagged-count">0</span> Flagged Review</div>
+              <div class="summary-pill purple"><i class="fa-solid fa-wand-magic-sparkles"></i> <span id="out-enriched-count">0</span> AI Enriched</div>
+              <div class="summary-pill gray"><i class="fa-solid fa-circle-minus"></i> <span id="out-missing-count">0</span> Missing</div>
+            </div>
+
+            <!-- Fields Table -->
+            <div class="table-responsive">
+              <table class="data-table" id="fields-table">
+                <thead>
+                  <tr>
+                    <th>Attribute Field</th>
+                    <th>Enriched Value</th>
+                    <th>Normalized Unit</th>
+                    <th>Extraction Confidence</th>
+                    <th>Validation Status</th>
+                    <th>Traceability</th>
+                  </tr>
+                </thead>
+                <tbody id="fields-tbody">
+                  <!-- Dynamic fields populated via JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="card-footer-actions">
+              <button class="btn btn-secondary" id="export-csv-btn">
+                <i class="fa-solid fa-file-csv"></i> Download CSV
+              </button>
+              <button class="btn btn-secondary" id="export-xlsx-btn">
+                <i class="fa-solid fa-file-excel"></i> Download XLSX
+              </button>
+              <button class="btn btn-primary" id="view-in-review-btn">
+                <i class="fa-solid fa-arrow-right"></i> Open in Review Queue
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: HUMAN REVIEW QUEUE -->
+    <section class="tab-content" id="tab-review-queue">
+      <div class="section-header">
+        <div>
+          <h2><i class="fa-solid fa-clipboard-check"></i> Human-in-the-Loop Review Queue</h2>
+          <p>Review and verify attributes flagged for low confidence, rule validation violations, or missing attributes.</p>
+        </div>
+        <div class="filter-group">
+          <label>Filter Flag Type:</label>
+          <select id="review-filter-status">
+            <option value="all">All Flagged Items</option>
+            <option value="flagged_validation_error">Validation Rule Errors</option>
+            <option value="flagged_low_confidence">Low AI Confidence (&lt;65%)</option>
+            <option value="flagged_ungrounded">Ungrounded (Possible Hallucination)</option>
+            <option value="ai_enriched">AI Enriched (Inferred)</option>
+            <option value="missing">Missing Required Attributes</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="review-queue-container" id="review-queue-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- TAB 3: PRODUCT CATALOG -->
+    <section class="tab-content" id="tab-catalog">
+      <div class="section-header">
+        <div>
+          <h2><i class="fa-solid fa-table-list"></i> Processed Product Intelligence Catalog</h2>
+          <p>All persistent product records stored in SQLite database with multi-source origins.</p>
+        </div>
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="catalog-search-input" placeholder="Search by name, category, origin, or IP rating..." />
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table" id="catalog-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Product Name</th>
+              <th>Category</th>
+              <th>Ingestion Source</th>
+              <th>Voltage</th>
+              <th>Current</th>
+              <th>IP Rating</th>
+              <th>Confidence</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="catalog-tbody">
+            <!-- Rendered via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: COMMERCE OUTPUT & UNILOG COMPLIANCE -->
+    <section class="tab-content" id="tab-commerce">
+      <div class="section-header">
+        <div>
+          <h2><i class="fa-solid fa-file-invoice"></i> Commerce Output &amp; Unilog Compliance</h2>
+          <p>The catalogue rewritten into the five required description formats, scored against the
+             content guidelines. Only values that passed the trust gate are allowed into a description —
+             an invented specification scores zero, so withholding is the higher-scoring behaviour.</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" id="commerce-refresh-btn">
+            <i class="fa-solid fa-rotate"></i> Run Compliance Report
+          </button>
+        </div>
+      </div>
+
+      <!-- Compliance KPIs -->
+      <section class="kpi-banner">
+        <div class="kpi-card">
+          <div class="kpi-icon icon-blue"><i class="fa-solid fa-ruler-horizontal"></i></div>
+          <div class="kpi-info">
+            <span class="kpi-value" id="cmp-charlimit">—</span>
+            <span class="kpi-label">Char-Limit Compliance</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon icon-green"><i class="fa-solid fa-list-check"></i></div>
+          <div class="kpi-info">
+            <span class="kpi-value" id="cmp-lov">—</span>
+            <span class="kpi-label">LOV Compliance</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon icon-purple"><i class="fa-solid fa-sitemap"></i></div>
+          <div class="kpi-info">
+            <span class="kpi-value" id="cmp-classification">—</span>
+            <span class="kpi-label">Item Type Resolved</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon icon-amber"><i class="fa-solid fa-shield-halved"></i></div>
+          <div class="kpi-info">
+            <span class="kpi-value" id="cmp-trustgate">—</span>
+            <span class="kpi-label">Passed Trust Gate</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3><i class="fa-solid fa-circle-info"></i> Report Context</h3>
+          <span class="badge badge-neutral" id="cmp-products-count">0 products</span>
+        </div>
+        <div class="panel-body">
+          <div class="fetch-warning-banner hidden" id="cmp-lov-warning">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span id="cmp-lov-warning-text"></span>
+          </div>
+          <ul class="rule-list" id="cmp-context-list">
+            <li>Click <strong>Run Compliance Report</strong> to score the catalogue.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Sourcing policy + live checker -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3><i class="fa-solid fa-filter-circle-xmark"></i> Sourcing Policy</h3>
+          <span class="badge badge-purple" id="cmp-sourcing-policy">loading…</span>
+        </div>
+        <div class="panel-body">
+          <p class="rule-note" id="cmp-sourcing-desc">
+            The content guidelines- Manufacturer sources are preferred. Verified distributor sources may be used with review flags when manufacturer data is unavailable. Marketplaces, forums, and community sources remain excluded..
+          </p>
+          <div class="input-row">
+            <input type="url" id="cmp-sourcing-url" placeholder="Paste any product URL to classify it without fetching…" />
+            <button class="btn btn-secondary" id="cmp-sourcing-check-btn">
+              <i class="fa-solid fa-magnifying-glass"></i> Check Source
+            </button>
+          </div>
+          <div class="sourcing-result hidden" id="cmp-sourcing-result"></div>
+        </div>
+      </div>
+
+      <!-- Per-product descriptions -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3><i class="fa-solid fa-align-left"></i> Generated Descriptions</h3>
+          <span class="badge badge-info">5 formats per product</span>
+        </div>
+        <div class="panel-body">
+          <div id="cmp-products-container">
+            <div class="empty-state">
+              <i class="fa-solid fa-file-lines"></i>
+              <p>No report yet. Run the compliance report to generate the five description formats
+                 for every product in the catalogue.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: VALIDATION RULES & SCHEMA -->
+    <section class="tab-content" id="tab-rules">
+      <div class="section-header">
+        <div>
+          <h2><i class="fa-solid fa-microchip"></i> Multi-Source Ingestion & Validation Specs</h2>
+          <p>Explaining how PRISM ingests Web, PDF, and Text sources with complete explainability traces.</p>
+        </div>
+      </div>
+
+      <div class="rules-grid">
+        <div class="rule-card">
+          <div class="rule-header"><i class="fa-solid fa-globe icon-blue"></i> 1. Real Browser Web Ingestion</div>
+          <p>Fetches live manufacturer web pages via <code>httpx</code> & BeautifulSoup:</p>
+          <ul class="rule-list">
+            <li>Uses full Chrome/Chromium User-Agent & Accept headers</li>
+            <li>Strips navigation, footers, ad blocks, and boilerplate scripts</li>
+            <li>Exposes HTTP status codes and raw text length preview in UI</li>
+          </ul>
+        </div>
+
+        <div class="rule-card">
+          <div class="rule-header"><i class="fa-solid fa-shield-cat icon-amber"></i> 2. Overconfidence Guardrails</div>
+          <p>Prevents AI overconfidence on sparse or failed fetches:</p>
+          <ul class="rule-list">
+            <li>Content &lt; 200 chars triggers automated warning flag</li>
+            <li>HTTP errors (403, 404, 500) force zero confidence across fields</li>
+            <li>Automatically routes unverified products to Review Queue</li>
+          </ul>
+        </div>
+
+        <div class="rule-card">
+          <div class="rule-header"><i class="fa-solid fa-scale-balanced icon-green"></i> 3. Deterministic Validation Engine</div>
+          <ul class="rule-list">
+            <li><strong>Voltage Bounds:</strong> 0V to 1000V DC/AC</li>
+            <li><strong>Current Bounds:</strong> 0A to 200A capacity</li>
+            <li><strong>IP Code Regex:</strong> Validates against standard codes (IP20-IP69K)</li>
+            <li><strong>Contradictions:</strong> Flags submersible items tagged with indoor-only IP20 rating</li>
+          </ul>
+        </div>
+
+        <div class="rule-card">
+          <div class="rule-header"><i class="fa-solid fa-magnifying-glass-chart icon-purple"></i> 4. Multi-Source Traceability</div>
+          <ul class="rule-list">
+            <li><strong>Origin Tagging:</strong> Explicitly marks field sources (e.g. <code>URL: automationdirect.com</code>)</li>
+            <li><strong>Verbatim Quotes:</strong> Displays exact source snippet evidence in quote inspector</li>
+            <li><strong>Raw Text Preview:</strong> One-click inspector showing raw scraped content</li>
+          </ul>
+        </div>
+
+        <div class="rule-card">
+          <div class="rule-header"><i class="fa-solid fa-filter-circle-xmark icon-amber"></i> 5. Sourcing Rules (Manufacturer-Only)</div>
+          <p>The guidelines require manufacturer sources. The gate runs <em>before</em> the request:</p>
+          <ul class="rule-list">
+            <li><strong>Rejected:</strong> marketplaces (seller-authored specs), distributors (re-mapped units), encyclopedias (category articles, not parts), forums</li>
+            <li><strong>Permitted but flagged:</strong> unrecognised domains — allowed, but not positively verified as the manufacturer</li>
+            <li><strong>Strict mode:</strong> a <code>data/approved_domains.txt</code> allow-list overrides the category rules entirely</li>
+          </ul>
+        </div>
+
+        <div class="rule-card">
+          <div class="rule-header"><i class="fa-solid fa-file-invoice icon-green"></i> 6. Commerce Output Compliance</div>
+          <p>Five description formats built from trust-gated values only:</p>
+          <ul class="rule-list">
+            <li><strong>Invoice:</strong> ≤40 chars, ALL CAPS, approved abbreviations</li>
+            <li><strong>Mobile:</strong> 60–80 chars · <strong>Title:</strong> ≤200 · <strong>Long:</strong> ≤1000 · <strong>Web:</strong> prose</li>
+            <li><strong>Units:</strong> approved abbreviation with a mandatory space; decimal inches rendered as trade fractions (0.375 → 3/8 in)</li>
+            <li><strong>LOV:</strong> every enumerated value checked against the controlled vocabulary, with the approved spelling adopted</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- EXPLAINABILITY INSPECTOR DRAWER / MODAL -->
+  <div class="drawer-overlay hidden" id="drawer-overlay"></div>
+  <aside class="explainability-drawer hidden" id="explain-drawer">
+    <div class="drawer-header">
+      <div>
+        <span class="badge badge-purple" id="drawer-field-key">voltage_rating</span>
+        <h3 id="drawer-field-title">Voltage Rating Evidence Trace</h3>
+      </div>
+      <button class="drawer-close-btn" id="drawer-close-btn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="drawer-body">
+      
+      <!-- Source Origin Badge -->
+      <div class="source-origin-banner" id="drawer-source-origin-banner">
+        <i class="fa-solid fa-globe icon-origin"></i>
+        <div>
+          <span class="origin-label">Source Origin:</span>
+          <span class="origin-val" id="drawer-source-origin-val">URL: phoenixcontact.com</span>
+        </div>
+      </div>
+
+      <!-- Confidence & Status Banner -->
+      <div class="drawer-status-card" id="drawer-status-card">
+        <div class="status-card-header">
+          <span class="drawer-status-badge" id="drawer-status-badge">VERIFIED</span>
+          <span class="drawer-confidence-num" id="drawer-confidence-num">Confidence: 90%</span>
+        </div>
+        <p class="drawer-status-msg" id="drawer-status-msg">Passed deterministic rule validation and confidence threshold.</p>
+      </div>
+
+      <!-- Field Value Summary -->
+      <div class="drawer-section">
+        <h4><i class="fa-solid fa-tag"></i> Extracted Value & Unit</h4>
+        <div class="drawer-value-display">
+          <span class="drawer-val" id="drawer-val-text">250</span>
+          <span class="drawer-unit" id="drawer-unit-text">V</span>
+        </div>
+      </div>
+
+      <!-- Source Text Evidence Snippet -->
+      <div class="drawer-section">
+        <h4><i class="fa-solid fa-quote-left"></i> Source Snippet Evidence (Verbatim Match)</h4>
+        <div class="evidence-quote-box">
+          <p id="drawer-snippet-quote">"Rated voltage: 250V AC/DC, max current: 4.0 Amps."</p>
+        </div>
+      </div>
+
+      <!-- AI Reasoning -->
+      <div class="drawer-section">
+        <h4><i class="fa-solid fa-brain"></i> Extraction & Logic Reasoning</h4>
+        <p class="reasoning-text" id="drawer-reasoning-text">Matched explicit voltage keyword and VAC unit pattern in spec section.</p>
+      </div>
+
+      <!-- Full Source Text Context -->
+      <div class="drawer-section">
+        <h4><i class="fa-solid fa-file-text"></i> Highlighted Raw Input Context</h4>
+        <div class="raw-context-box" id="drawer-raw-context">
+          <!-- Text with highlighted snippet -->
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

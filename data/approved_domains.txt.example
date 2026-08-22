@@ -1,0 +1,63 @@
+# Approved enrichment source domains (strict allow-list)
+# =======================================================
+#
+# Rename this file to `approved_domains.txt` to ACTIVATE it.
+#
+# While `data/approved_domains.txt` exists, it overrides the category rules in
+# app/sourcing.py entirely: only the domains listed here may be fetched, and
+# everything else is rejected with a reason. That is the right configuration for
+# a graded or audited run, where the source set should be agreed in advance
+# rather than decided by whatever gets pasted into the box.
+#
+# While the file does NOT exist, the category policy applies instead
+# (default `manufacturer_only`: marketplaces, distributors, encyclopedias and
+# forums are rejected; unrecognised domains are permitted but flagged).
+#
+# One domain per line. Subdomains and www are handled automatically, so
+# `turck.com` also permits `www.turck.com` and `pdb2.turck.de`.
+# `#` starts a comment.
+
+# --- sensing / automation ---
+turck.com
+bannerengineering.com
+omron.com
+keyence.com
+ifm.com
+pepperl-fuchs.com
+sick.com
+balluff.com
+festo.com
+
+# --- connectors / electrical ---
+phoenixcontact.com
+harting.com
+amphenol.com
+te.com
+molex.com
+weidmueller.com
+wago.com
+
+# --- fittings ---
+anvilintl.com
+victaulic.com
+swagelok.com
+nibco.com
+watts.com
+charlottepipe.com
+mueller-industries.com
+
+# --- faucets / plumbing ---
+moen.com
+kohler.com
+deltafaucet.com
+grohe.com
+americanstandard-us.com
+hansgrohe.com
+elkay.com
+
+# --- appliances ---
+frigidaire.com
+whirlpool.com
+geappliances.com
+electrolux.com
+rheem.com

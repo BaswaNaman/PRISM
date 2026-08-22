@@ -1,0 +1,58 @@
+[
+  {
+    "id": "sample_1",
+    "name": "M12 4-Pin A-Coded Male Connector",
+    "category_hint": "Industrial Connector",
+    "raw_input": "Phoenix Contact M12 A-Coded 4-position male straight connector. Rated voltage: 250V AC/DC, max current: 4.0 Amps. IP67 ingress protection rating when mated. Housing material made of Nickel-plated brass with gold-plated copper contacts. Operating temp: -40°C to +85°C (-40°F to 185°F). Certifications: CE, UL, RoHS compliant. Screw locking mechanism for cable diameter 4-8mm.",
+    "description": "High quality industrial connector with complete documentation."
+  },
+  {
+    "id": "sample_2",
+    "name": "Inductive Proximity Sensor M8",
+    "category_hint": "Industrial Sensor",
+    "raw_input": "Sensor M8 x 1 PNP Normally Open (NO). Sensing distance 2mm flush. Supply voltage: 10 to 30 VDC. Stainless steel 316L housing with LED status indicator. IP68 waterproof rating up to 2m depth. Operating range: -25 C to 70 C. CE certified. No current draw listed in quick guide.",
+    "description": "Sensor listing missing current rating spec."
+  },
+  {
+    "id": "sample_3",
+    "name": "Heavy-Duty RJ45 Field Plug",
+    "category_hint": "Industrial Connector",
+    "raw_input": "Cat6A Shielded RJ45 Field Assembly Plug for harsh industrial environments. Rated voltage 48 V, current rating 1.5A. Ingress protection reported as IP-677 in manual. Die-cast zinc alloy enclosure. Temperature spec sheet shows -20°C to -80°C. RoHS compliant.",
+    "description": "Contains invalid IP code (IP-677) and contradictory temp range (min > max)."
+  },
+  {
+    "id": "sample_4",
+    "name": "High-Current Terminal Block 120A",
+    "category_hint": "Industrial Connector",
+    "raw_input": "Modular High-Power Terminal Block for panel distribution. Max current rating 120 Amperes, voltage rating 600V. Polyamide PA66 flame retardant housing (UL94 V-0). Operating temp -30 to 100 degrees Celsius. UL and CE approved.",
+    "description": "Missing required IP rating attribute for connector category."
+  },
+  {
+    "id": "sample_5",
+    "name": "Submersible Liquid Level Pressure Transmitter",
+    "category_hint": "Industrial Sensor",
+    "raw_input": "Deep well submersible level sensor for continuous groundwater monitoring. Piezoresistive silicon sensor element. Operating voltage 24V DC, signal output 4-20mA. Product sheet lists protection rating as IP20 indoor standard. Stainless steel body. Temp limits -10°C to 60°C. CE certified.",
+    "description": "Contradiction: Submersible level sensor listed with indoor-only IP20 rating."
+  },
+  {
+    "id": "sample_6",
+    "name": "DIN Rail Modular Power Bus Connector",
+    "category_hint": "Industrial Connector",
+    "raw_input": "Power bus bar connector for 35mm DIN rail mounting. Supposedly supports high voltage up to around 480V and maybe 20A or so depending on ambient conditions. Unclear casing material, possibly thermoplastic. Working temp up to 75°C. CE listed.",
+    "description": "Contains vague/uncertain phrasing leading to low confidence scores."
+  },
+  {
+    "id": "sample_7",
+    "name": "Laser Photoelectric Distance Sensor",
+    "category_hint": "Industrial Sensor",
+    "raw_input": "Class 2 Laser distance measuring sensor, range 0.1 to 10 meters. Operating voltage 18-30V DC, max current consume 50mA. IP65 dust and water jet resistance. Housing aluminum anodized black. Operating temp: -10°C to 50°C. UL, CE, RoHS certified. Push-pull output signal.",
+    "description": "Rich optical sensor spec with accurate attributes."
+  },
+  {
+    "id": "sample_8",
+    "name": "Push-Pull IP68 Waterproof Cable Socket",
+    "category_hint": "Industrial Connector",
+    "raw_input": "Quick-release push-pull coupling socket 12-pin. Rating: 125V / 3A. Enclosure IP68 rated. Machined brass gold contacts. Operating temperature -40C to 105C. RoHS & UL listed. Cable diameter range 5.0 - 7.5mm.",
+    "description": "Multi-pin push-pull socket with complete attributes."
+  }
+]
