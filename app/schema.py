@@ -42,6 +42,7 @@ class ProductIntelligenceRecord(BaseModel):
     certifications: ExtractedField
     mounting_type: ExtractedField
     
+    
     # 10/10 FEATURE: Dynamic extraction escape hatch
     extra_attributes: Dict[str, ExtractedField] = Field(default_factory=dict)
     

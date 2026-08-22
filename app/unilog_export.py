@@ -471,6 +471,24 @@ def build_export_row(
     except Exception as exc:
         warnings.append(f"description build failed: {exc}")
 
+    # ---- Item Features --------------------------------------------------
+    features = getattr(record, "features", None) or []
+    feature_number = 1
+
+    for feature in features:
+        if feature_number > 20:
+            break
+
+        text = str(feature).strip()
+        if not text:
+            continue
+
+        column = f"ITEM_FEATURES_{feature_number}"
+        if column in row:
+            row[column] = text
+
+        feature_number += 1
+
     # ---- Dynamic attribute slots ----------------------------------------
     # Sequential packing only -- no field is ever assumed to belong to a
     # particular slot number (spec requirement).

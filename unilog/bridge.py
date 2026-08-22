@@ -32,7 +32,7 @@ badge in the UI.
 `include_enriched=True` relaxes the AI-inference rule for demos, but the report
 still marks those attributes so they never masquerade as sourced values.
 """
-
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 

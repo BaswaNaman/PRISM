@@ -1129,14 +1129,28 @@ def process_raw_product_text(
         enriched_count = sum(1 for f in failure_fields if f.validation_status == "ai_enriched")
 
         return ProductIntelligenceRecord(
-            id=pid, raw_input=raw_text, input_mode=input_mode, source_origin=source_origin, fetch_metadata=meta,
-            product_name=fields["product_name"], category=fields["category"], voltage_rating=fields["voltage_rating"],
-            current_rating=fields["current_rating"], ip_rating=fields["ip_rating"], connector_type=fields["connector_type"],
-            operating_temperature_min=fields["operating_temperature_min"], operating_temperature_max=fields["operating_temperature_max"],
-            material=fields["material"], certifications=fields["certifications"], mounting_type=fields["mounting_type"],
-            extra_attributes={}, overall_confidence=0.0, overall_status="needs_review",
-            total_fields=len(failure_fields), verified_fields_count=verified_count,
-            flagged_fields_count=flagged_count, missing_fields_count=missing_count,
+            id=pid,
+            raw_input=raw_text,
+            input_mode=input_mode,
+            source_origin=source_origin,
+            fetch_metadata=meta,
+            product_name=fields["product_name"],
+            category=fields["category"],
+            voltage_rating=fields["voltage_rating"],
+            current_rating=fields["current_rating"],
+            ip_rating=fields["ip_rating"],
+            connector_type=fields["connector_type"],
+            operating_temperature_min=fields["operating_temperature_min"],
+            operating_temperature_max=fields["operating_temperature_max"],
+            material=fields["material"],
+            certifications=fields["certifications"],
+            mounting_type=fields["mounting_type"],
+            extra_attributes={},
+            overall_status="needs_review",
+            total_fields=len(failure_fields),
+            verified_fields_count=verified_count,
+            flagged_fields_count=flagged_count,
+            missing_fields_count=missing_count,
             enriched_fields_count=enriched_count,
             created_at=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
@@ -1154,6 +1168,7 @@ def process_raw_product_text(
         extracted_data = extract_with_heuristics_fallback(raw_text, product_name_hint, category_hint)
 
     fields = {}
+    extra_fields={}
     for key, label in FIELD_LABELS.items():
         field_info = extracted_data.get(key, {})
         if not isinstance(field_info, dict): field_info = {}
