@@ -32,7 +32,7 @@ badge in the UI.
 `include_enriched=True` relaxes the AI-inference rule for demos, but the report
 still marks those attributes so they never masquerade as sourced values.
 """
-
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -60,6 +60,32 @@ FIELD_TO_ATTRIBUTE: Dict[str, Tuple[str, bool]] = {
 
 # Fields consumed as record identity rather than as attributes.
 IDENTITY_FIELDS = {"product_name", "category"}
+
+# Dynamic identity/identifier fields belong in dedicated export columns, not
+# in customer-facing description prose. Keeping them out also prevents the UOM
+# normalizer from misreading an MPN suffix (for example the final "G" in
+# DCB518ASTS06G) as a measurement unit.
+DESCRIPTION_EXCLUDED_EXTRA_KEYS = {
+    "brand", "manufacturer", "manufacturer_name", "mfr",
+    "mpn", "manufacturer_part_number", "mfg_part_num", "part_number",
+    "model", "model_no", "model_number",
+    "sku", "stock_no", "stock_number", "item_number",
+    "upc", "ean", "gtin", "barcode",
+    "http", "https", "url", "source_url", "product_url",
+    "estimated_arrival", "estimated_arrival_on", "arrival_date",
+    "availability", "available", "ship_to_store", "shipping",
+}
+
+
+def _normalized_extra_key(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", str(value or "").lower()).strip("_")
+
+
+def is_non_product_extra(raw_key: Any, label: Any, value: Any) -> bool:
+    keys = {_normalized_extra_key(raw_key), _normalized_extra_key(label)}
+    return bool(keys & DESCRIPTION_EXCLUDED_EXTRA_KEYS) or bool(
+        re.match(r"^https?://", str(value or "").strip(), flags=re.IGNORECASE)
+    )
 
 
 @dataclass
@@ -109,12 +135,18 @@ def _attr_of(obj: Any, key: str, default=None):
     return getattr(obj, key, default)
 
 
-def _description_unit(value: Any, unit: Any) -> Optional[Any]:
+def _description_unit(value: Any, unit: Any, label: Any = None, snippet: Any = None) -> Optional[Any]:
     """Suppress a unit when that same unit is already embedded in the value."""
     if not unit:
         return unit
     text = str(value or "").strip()
     u = str(unit).strip()
+    if _normalized_extra_key(u) == _normalized_extra_key(label) or u.lower() == "grit":
+        return None
+    evidence = str(snippet or "")
+    if re.search(r'(?:\b(?:inches|inch|in)\b|[\"″])', evidence, re.IGNORECASE):
+        if u.lower() in {"mm", "millimeter", "millimeters"}:
+            return "in"
     if not text or not u:
         return unit
 
@@ -201,10 +233,26 @@ def to_product_record(record: Any,
     # ---- dynamic attributes discovered beyond the fixed schema -----------
     if include_dynamic:
         extras = _field_of(record, "extra_attributes") or {}
+        seen_values = {
+            _normalized_extra_key(a.value) for a in attributes
+            if _normalized_extra_key(a.value)
+        }
+        category_obj = _field_of(record, "category")
+        identity_values = {
+            _normalized_extra_key(v) for v in (
+                brand, manufacturer, series, mpn,
+                _attr_of(category_obj, "value"),
+            ) if _normalized_extra_key(v)
+        }
         if isinstance(extras, dict):
             for raw_key, fobj in extras.items():
-                ok, why = _admissible(fobj, include_enriched)
                 label = str(_attr_of(fobj, "label", None) or raw_key).replace("_", " ").strip().title()
+                if is_non_product_extra(raw_key, label, _attr_of(fobj, "value")):
+                    continue
+                normalized_value = _normalized_extra_key(_attr_of(fobj, "value"))
+                if normalized_value and normalized_value in (seen_values | identity_values):
+                    continue
+                ok, why = _admissible(fobj, include_enriched)
                 if not ok:
                     if why not in ("no value extracted", "field is missing"):
                         report.withheld.append({"attribute": label, "field": raw_key, "reason": why})
@@ -212,9 +260,14 @@ def to_product_record(record: Any,
                 attributes.append(desc_mod.Attribute(
                     label=label,
                     value=_attr_of(fobj, "value"),
-                    unit=_description_unit(_attr_of(fobj, "value"), _attr_of(fobj, "unit")),
+                    unit=_description_unit(
+                        _attr_of(fobj, "value"), _attr_of(fobj, "unit"), label,
+                        _attr_of(fobj, "source_snippet"),
+                    ),
                     is_key=False,
                 ))
+                if normalized_value:
+                    seen_values.add(normalized_value)
                 report.admitted.append(label)
                 if str(_attr_of(fobj, "validation_status")) == "ai_enriched":
                     report.inferred_admitted.append(label)

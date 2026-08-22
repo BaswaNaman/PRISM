@@ -42,8 +42,10 @@ class ProductIntelligenceRecord(BaseModel):
     certifications: ExtractedField
     mounting_type: ExtractedField
     
+    
     # 10/10 FEATURE: Dynamic extraction escape hatch
     extra_attributes: Dict[str, ExtractedField] = Field(default_factory=dict)
+    features: List[str] = Field(default_factory=list)
     
     overall_confidence: float = 0.0
     overall_status: str = "pending_review"  # verified | needs_review | rejected

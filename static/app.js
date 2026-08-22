@@ -278,8 +278,17 @@ function clearInputForm() {
   document.getElementById("raw-input-text").value = "";
   document.getElementById("url-input-text").value = "";
   document.getElementById("product-name-hint").value = "";
+  document.getElementById("discover-mpn").value = "";
+  document.getElementById("discover-description").value = "";
+  document.getElementById("discover-manufacturer").value = "";
+  document.getElementById("discover-brand").value = "";
+  document.getElementById("category-hint").value = "";
   document.getElementById("input-char-count").innerText = "0 chars";
+
   selectedPDFFile = null;
+  document.getElementById("pdf-file-input").value = "";
+  document.getElementById("pdf-filename").innerText = "datasheet.pdf";
+  document.getElementById("pdf-filesize").innerText = "0 KB";
   document.getElementById("pdf-file-preview").classList.add("hidden");
 }
 
@@ -288,8 +297,8 @@ function clearInputForm() {
 // --------------------------------------------------------------------------
 async function runEnrichmentPipeline() {
   const nameHint = document.getElementById("product-name-hint").value.trim();
-  const catHint = document.getElementById("category-hint").value;
-  const effectiveCat = catHint === "Auto-Detect" ? null : catHint;
+  const catHint = document.getElementById("category-hint").value.trim();
+  const effectiveCat = catHint || null;
 
   const progressEl = document.getElementById("pipeline-progress");
   progressEl.classList.remove("hidden");
@@ -967,7 +976,7 @@ async function downloadUnilogExport(format) {
 }
 
 // --------------------------------------------------------------------------
-// Commerce Output & Unilog Compliance
+// Commerce Output & Unilog Readiness
 // --------------------------------------------------------------------------
 // This panel exists because the compliance layer used to be reachable only from
 // a terminal, which meant the half of the work the brief actually grades was
@@ -1040,7 +1049,7 @@ async function runComplianceReport() {
   const container = document.getElementById("cmp-products-container");
   const original = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Scoring…`;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Evaluating…`;
   container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i>
     <p>Building five description formats for every product…</p></div>`;
 
@@ -1052,7 +1061,7 @@ async function runComplianceReport() {
   } catch (err) {
     container.innerHTML = `<div class="empty-state">
       <i class="fa-solid fa-circle-exclamation"></i>
-      <p>Compliance report failed: ${escapeHTML(err.message)}</p></div>`;
+      <p>Readiness report failed: ${escapeHTML(err.message)}</p></div>`;
   } finally {
     btn.disabled = false;
     btn.innerHTML = original;
@@ -1091,7 +1100,7 @@ function renderComplianceReport(data) {
       ${tg.attributes_withheld || 0} withheld as ungrounded, inferred or below the
       confidence threshold</li>`,
     `<li><strong>LOV:</strong> ${lov.registry_loaded ? `${lov.classpaths} classpaths loaded;
-      ${lov.values_in_lov || lov.in_vocab || 0}/${lov.checked || 0} values legal`
+      ${lov.values_in_lov || lov.in_vocab || 0}/${lov.checked || 0} values found in the loaded vocabulary`
       : "registry not loaded"}</li>`,
   ];
   if (dd.total_rows) {
@@ -1157,7 +1166,7 @@ function renderComplianceReport(data) {
         <div class="commerce-product-meta">
           ${clsBadge}
           ${p.classpath ? `<span class="badge badge-purple">${escapeHTML(p.classpath)}</span>` : ""}
-          <span class="badge badge-info">${p.compliance.compliant}/${p.compliance.fields_built} compliant</span>
+          <span class="badge badge-info">${p.compliance.compliant}/${p.compliance.fields_built} within limits</span>
           <span class="badge badge-neutral">${tr.attributes_admitted || 0} attrs published</span>
         </div>
       </div>

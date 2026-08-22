@@ -117,7 +117,11 @@ def validate_and_enrich_record(record: ProductIntelligenceRecord, raw_text: str)
         }
         for field_name in not_applicable_fields:
             field_obj = fields_dict[field_name]
-            if field_obj.value is None:
+            # `material` is specifically Housing / Body Material in the fixed
+            # schema. Abrasive grain/backing values belong in dynamic fields
+            # such as Abrasive Material or Abrasive Backing, even when an
+            # extractor populated this fixed field.
+            if field_obj.value is None or field_name == "material":
                 field_obj.validation_status = "not_applicable"
                 field_obj.validation_message = (
                     f"{field_obj.label} is not applicable to the resolved product category "

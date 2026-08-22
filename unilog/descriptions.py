@@ -142,6 +142,25 @@ def _join_parts(parts: List[Optional[str]], sep: str = " ") -> str:
     return re.sub(r"\s+", " ", sep.join(clean)).strip()
 
 
+def _normalize_description_text(text: str, normalizer, *protected_tokens: Optional[str]) -> str:
+    """Normalize measurements without rewriting identity tokens such as MPNs.
+
+    The UOM spacing normalizer correctly turns values like ``250VAC`` into
+    ``250 V AC``, but an alphanumeric MPN ending in a unit letter must remain
+    byte-for-byte intact.
+    """
+    protected = {}
+    working = text
+    for index, token in enumerate(t for t in protected_tokens if t):
+        marker = f"QZPRISMIDENTITY{chr(65 + index)}QZ"
+        protected[marker] = str(token)
+        working = working.replace(str(token), marker)
+    working = fractions_util.convert_decimals_in_text(normalizer.fix_spacing_in_text(working))
+    for marker, token in protected.items():
+        working = working.replace(marker, token)
+    return working
+
+
 # ==========================================================================
 # 1. Invoice description — <= 40 chars, ALL CAPS
 # ==========================================================================
@@ -258,7 +277,7 @@ def build_product_title(rec: ProductRecord,
     else:
         text = head
 
-    text = fractions_util.convert_decimals_in_text(nz.fix_spacing_in_text(text))
+    text = _normalize_description_text(text, nz, rec.mpn)
     text = re.sub(r"\s+", " ", text).strip().rstrip(",")
 
     notes = []
@@ -306,7 +325,7 @@ def build_long_description(rec: ProductRecord,
             segments.append(rendered)
 
     text = _join_parts([head] + [", ".join(segments)] if segments else [head], sep=", ")
-    text = fractions_util.convert_decimals_in_text(nz.fix_spacing_in_text(text))
+    text = _normalize_description_text(text, nz, rec.mpn)
     text = re.sub(r"\s+", " ", text).strip().rstrip(",")
 
     notes = []
@@ -385,7 +404,7 @@ def build_web_description(rec: ProductRecord,
         sentences.append(f"{_FEATURE_LEAD} {_oxford(feats)}.")
 
     text = " ".join(sentences)
-    text = fractions_util.convert_decimals_in_text(nz.fix_spacing_in_text(text))
+    text = _normalize_description_text(text, nz, rec.mpn)
     text = re.sub(r"\s+", " ", text).strip()
 
     # Drop whole sentences from the tail rather than cutting prose mid-clause.

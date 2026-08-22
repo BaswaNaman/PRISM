@@ -205,24 +205,21 @@ def get_sample_products():
 
 @app.get("/api/sample-urls")
 def get_sample_urls():
-    """Preset demo URLs.
+    """Stable demo URLs for the allow_distributors sourcing policy.
 
-    Ordered deliberately. The first two are manufacturer domains and pass the
-    sourcing gate. The third is a distributor and is REJECTED under the default
-    manufacturer_only policy — it is kept on purpose, because a rejection is the
-    clearest way to show the gate working. Set PRISM_SOURCING_POLICY=allow_distributors
-    to fetch it.
+    Manufacturer pages remain preferred. The distributor example is permitted
+    but should remain visibly flagged as a distributor source.
     """
     return [
-        {"title": "Phoenix Contact M12 Connector",
-         "url": "https://www.phoenixcontact.com/en-us/products/sensor-actuator-cable-sac-4p-m12ms15-150-1533592",
-         "description": "M12 4-pin circular connector. Manufacturer source — passes the sourcing gate."},
-        {"title": "TE Connectivity Industrial RJ45 Plug",
-         "url": "https://www.te.com/usa-en/product-1-1987004-1.html",
-         "description": "Industrial ethernet connector. Manufacturer source — passes the sourcing gate."},
-        {"title": "AutomationDirect 8mm Proximity Sensor (DW-AD-511-M8)",
-         "url": "https://www.automationdirect.com/adc/shopping/catalog/sensors_-z-_encoders/inductive_proximity_sensors/8mm_tubular/dw-ad-511-m8",
-         "description": "Distributor listing — REJECTED by default, to demonstrate the manufacturer-only rule."}
+        {"title": "Contrinex M12 Proximity Sensor (DW-AD-513-M12)",
+         "url": "https://www.contrinex.com/products/basic-extra-distance-series-500-m12-non-embeddable-10-mm",
+         "description": "Inductive proximity sensor. Manufacturer source — preferred by the sourcing policy."},
+        {"title": "Diablo Sanding Belt (DCB518ASTS06G)",
+         "url": "https://diablotools.com/products/DCB518ASTS06G",
+         "description": "1/2 in x 18 in sanding belt set. Manufacturer source — preferred by the sourcing policy."},
+        {"title": "Indsencon Contrinex Sensor (DW-AS-513-M12)",
+         "url": "https://indsencon.com/products/contrinex-dw-as-513-m12-proximity-sensor",
+         "description": "Distributor source — permitted but flagged under allow_distributors."}
     ]
 
 @app.get("/api/stats", response_model=StatsResponse)

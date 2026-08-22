@@ -146,7 +146,7 @@ class UOMNormalizer:
         r"kilowatt|watts|watt|hertz|khz|mhz|hz|"
         r"psig|psi|bar|kpa|mpa|gpm|lpm|cfm|rpm|dba|db|btu|gal|"
         r"lbs|lb|oz|kg|mm|cm|ft|in|vac|vdc|kw|ma|hp|kv|mv|"
-        r"[wvalgm])"
+        r"[wvalm])"
         r"(?![A-Za-z])",
         re.IGNORECASE,
     )
@@ -155,6 +155,10 @@ class UOMNormalizer:
         """Insert the required space in glued measurements: '24in' -> '24 in'.
 
         Also normalises the unit token itself, so '50-1/4IN' becomes '50-1/4 in'.
+        A bare ``G`` is deliberately not repaired here: in catalog prose it is
+        commonly a grit suffix (``80G``) or part of an identifier. Structured
+        mass fields with unit ``g`` still normalize normally via
+        :meth:`normalize_unit` and :meth:`format_measurement`.
         """
         if not text:
             return text

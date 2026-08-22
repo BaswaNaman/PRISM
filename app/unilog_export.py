@@ -16,12 +16,9 @@ here, so a template change never silently drifts out of sync with this code).
 What this module reuses instead of reimplementing
 ---------------------------------------------------
 * `unilog.bridge.build_from_prism()` — the five commerce description strings
-  (Invoice/Mobile/Title/Long/Web) and MPN-from-name extraction. Four of the
-  five description strings map 1:1 onto real delivery columns (see
-  `DESC_FIELD_TO_COLUMN`); the fifth ("Web / Online Desc") has no matching
-  column in this schema and is deliberately left unmapped rather than forced
-  into `RETAIL_DESC` or `MARKETING_DESCRIPTION`, which mean something
-  different in the sample data.
+  (Invoice/Mobile/Title/Long/Web) and MPN-from-name extraction. The factual web
+  description is delivered through `MARKETING_DESCRIPTION`; it contains only
+  trust-gated source facts and does not add promotional claims.
 * `unilog.classify.ItemTypeClassifier` — `Classpath`, and `Dept`/`Class`/
   `Fine` derived by splitting the classpath on `>` (matches the sample data).
 * `unilog.uom` — unit-abbreviation normalization and numeric cleanup, reused
@@ -151,14 +148,13 @@ DYNAMIC_CORE_FIELD_KEYS = [
     "mounting_type",
 ]
 
-# unilog.bridge / unilog.descriptions field_name -> delivery column. Only
-# four of the five built descriptions have an unambiguous target; see the
-# module docstring for why "Web / Online Desc" is deliberately left out.
+# unilog.bridge / unilog.descriptions field_name -> delivery column.
 DESC_FIELD_TO_COLUMN = {
     "Invoice Desc": "INVOICE_DESC",
     "Mobile Desc": "MOBILE_DESC",
     "Product Title / Short Desc": "SHORT_DESC",
     "Long Description": "LONG_DESC1",
+    "Web / Online Desc": "MARKETING_DESCRIPTION",
 }
 
 # extra_attributes key/label (normalized: lowercased, spaces/underscores/
@@ -198,6 +194,105 @@ IDENTITY_ALIASES = {
 
 def _normalize_key(s: Any) -> str:
     return re.sub(r"[\s_\-]+", "", str(s or "").strip().lower())
+
+
+def _identity_key(value: Any) -> str:
+    """Comparison key for a small, explicit identity alias table."""
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").lower())
+
+
+_CANONICAL_BRANDS = {
+    "dewalt": "DEWALT",
+    "dewlt": "DEWALT",
+    "blackdecker": "BLACK+DECKER",
+    "blackanddecker": "BLACK+DECKER",
+}
+
+_CANONICAL_MANUFACTURERS = {
+    "stanleyblackdecker": "Stanley Black & Decker",
+    "stanleyblackanddecker": "Stanley Black & Decker",
+    "blackdeckerdewalt": "Stanley Black & Decker",
+    "blackanddeckerdewalt": "Stanley Black & Decker",
+    "blackdeckerdewlt": "Stanley Black & Decker",
+    "blackanddeckerdewlt": "Stanley Black & Decker",
+}
+
+
+def _normalize_identity_values(manufacturer: Any, brand: Any) -> Tuple[str, str]:
+    """Normalize only known aliases; unknown identities pass through unchanged."""
+    raw_manufacturer = str(manufacturer or "").strip()
+    raw_brand = str(brand or "").strip()
+    normalized_brand = _CANONICAL_BRANDS.get(_identity_key(raw_brand), raw_brand)
+    normalized_manufacturer = _CANONICAL_MANUFACTURERS.get(
+        _identity_key(raw_manufacturer), raw_manufacturer
+    )
+    return normalized_manufacturer, normalized_brand
+
+
+_HOURS_THEN_CAPACITY_RE = re.compile(
+    r"(?P<hours>\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b.{0,45}?"
+    r"(?P<capacity>\d+(?:\.\d+)?)\s*Ah\b",
+    re.IGNORECASE,
+)
+_CAPACITY_THEN_HOURS_RE = re.compile(
+    r"(?P<capacity>\d+(?:\.\d+)?)\s*Ah\b.{0,45}?"
+    r"(?P<hours>\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b",
+    re.IGNORECASE,
+)
+
+
+def _runtime_claims(text: str) -> List[Tuple[float, float]]:
+    """Return (battery capacity Ah, runtime hours) claims in one feature."""
+    claims: List[Tuple[float, float]] = []
+    for pattern in (_HOURS_THEN_CAPACITY_RE, _CAPACITY_THEN_HOURS_RE):
+        for match in pattern.finditer(text):
+            claim = (float(match.group("capacity")), float(match.group("hours")))
+            if claim not in claims:
+                claims.append(claim)
+    return claims
+
+
+def _conflicting_runtime_feature_indexes(features: List[str]) -> set:
+    """Reject every feature that disagrees on runtime for one battery size."""
+    by_capacity: Dict[float, Dict[float, set]] = {}
+    for index, text in enumerate(features):
+        for capacity, hours in _runtime_claims(text):
+            by_capacity.setdefault(capacity, {}).setdefault(hours, set()).add(index)
+    rejected = set()
+    for by_hours in by_capacity.values():
+        if len(by_hours) > 1:
+            for indexes in by_hours.values():
+                rejected.update(indexes)
+    return rejected
+
+
+_NON_PRODUCT_DYNAMIC_KEYS = {
+    "http", "https", "url", "sourceurl", "producturl",
+    "estimatedarrival", "estimatedarrivalon", "arrivaldate",
+    "availability", "available", "shiptostore", "shipping",
+}
+
+
+def _is_non_product_dynamic(raw_key: Any, label: Any, value: Any) -> bool:
+    return (
+        _normalize_key(raw_key) in _NON_PRODUCT_DYNAMIC_KEYS
+        or _normalize_key(label) in _NON_PRODUCT_DYNAMIC_KEYS
+        or bool(re.match(r"^https?://", str(value or "").strip(), re.IGNORECASE))
+    )
+
+
+def _safe_attribute_unit(field_obj: Any, label: Any) -> Optional[Any]:
+    """Suppress semantic pseudo-units and prefer units explicit in evidence."""
+    unit = getattr(field_obj, "unit", None)
+    if not unit:
+        return unit
+    if _normalize_key(unit) == _normalize_key(label) or str(unit).lower() == "grit":
+        return None
+    snippet = str(getattr(field_obj, "source_snippet", None) or "")
+    if (str(unit).lower() in {"mm", "millimeter", "millimeters"}
+            and re.search(r'(?:\b(?:inches|inch|in)\b|[\"″])', snippet, re.IGNORECASE)):
+        return "in"
+    return unit
 
 
 # ---------------------------------------------------------------------------
@@ -395,6 +490,20 @@ def build_export_row(
 
     extracted_brand = _find_exportable_extra(record, IDENTITY_ALIASES["brand"])
     resolved_brand = _format_value(extracted_brand.value, nz) if extracted_brand else (brand or "")
+
+    raw_manufacturer, raw_brand = resolved_manufacturer, resolved_brand
+    resolved_manufacturer, resolved_brand = _normalize_identity_values(
+        resolved_manufacturer, resolved_brand
+    )
+    if resolved_manufacturer != raw_manufacturer:
+        warnings.append(
+            f"normalized manufacturer {raw_manufacturer!r} to {resolved_manufacturer!r}"
+        )
+    if resolved_brand != raw_brand:
+        warnings.append(f"normalized brand {raw_brand!r} to {resolved_brand!r}")
+
+    if resolved_manufacturer and "MANUFACTURER_NAME" in row:
+        row["MANUFACTURER_NAME"] = resolved_manufacturer
     if resolved_brand and "BRAND_NAME" in row:
         row["BRAND_NAME"] = resolved_brand
 
@@ -428,7 +537,9 @@ def build_export_row(
     item_type: Optional[str] = None
     try:
         reg = registry if registry is not None else lov_mod.LOVRegistry()
-        classifier = classify_mod.ItemTypeClassifier(reg)
+        classifier = classify_mod.ItemTypeClassifier(
+            reg, extra_types=[category_value] if category_value else None
+        )
         classify_text = " ".join(str(x) for x in (product_name_value, category_value) if x).strip()
         cls = classifier.classify(classify_text) if classify_text else None
         if cls is not None:
@@ -443,6 +554,16 @@ def build_export_row(
                     row["Class"] = parts[1]
                 if len(parts) >= 3 and "Fine" in row:
                     row["Fine"] = parts[2]
+            elif item_type:
+                # Preserve a verified source category as a flat class when no
+                # client taxonomy is installed. Never invent hierarchy/UNSPSC.
+                if "Classpath" in row:
+                    row["Classpath"] = item_type
+                if "Class" in row:
+                    row["Class"] = item_type
+                warnings.append(
+                    "client taxonomy unavailable; exported verified item type as a flat classpath"
+                )
         else:
             item_type = category_value
     except Exception as exc:
@@ -471,6 +592,37 @@ def build_export_row(
     except Exception as exc:
         warnings.append(f"description build failed: {exc}")
 
+    # ---- Item Features --------------------------------------------------
+    features = [str(feature).strip() for feature in (getattr(record, "features", None) or [])]
+    raw_source_text = str(getattr(record, "raw_input", None) or "")
+    feature_number = 1
+    conflicting_feature_indexes = _conflicting_runtime_feature_indexes(features)
+
+    for feature_index, feature in enumerate(features):
+        if feature_number > 20:
+            break
+
+        text = str(feature).strip()
+        if not text:
+            continue
+
+        if feature_index in conflicting_feature_indexes:
+            warnings.append(f"Skipped conflicting runtime feature: {text!r}")
+            continue
+
+        # Features are publication-facing claims. Older saved records store
+        # them as strings without per-feature status metadata, so require the
+        # exact claim to occur in the retained source text before publishing.
+        if text not in raw_source_text:
+            warnings.append(f"Skipped ungrounded feature: {text!r}")
+            continue
+
+        column = f"ITEM_FEATURES_{feature_number}"
+        if column in row:
+            row[column] = text
+
+        feature_number += 1
+
     # ---- Dynamic attribute slots ----------------------------------------
     # Sequential packing only -- no field is ever assumed to belong to a
     # particular slot number (spec requirement).
@@ -481,7 +633,8 @@ def build_export_row(
         if not _is_exportable(fobj):
             continue
         label = (getattr(fobj, "label", None) or key.replace("_", " ").title()).strip()
-        slot_items.append((label, fobj.value, getattr(fobj, "unit", None)))
+        unit = _safe_attribute_unit(fobj, label)
+        slot_items.append((label, fobj.value, unit))
 
     consumed_logistics_cols: set = set()
     extra_attrs = getattr(record, "extra_attributes", None) or {}
@@ -496,6 +649,10 @@ def build_export_row(
         if any(norm_key in aliases or norm_label in aliases for aliases in IDENTITY_ALIASES.values()):
             continue
 
+        if _is_non_product_dynamic(raw_key, label, getattr(fobj, "value", None)):
+            warnings.append(f"Skipped non-product metadata attribute: {label!r}")
+            continue
+
         if _looks_like_merged_attribute_value(getattr(fobj, "value", None)):
             warnings.append(
                 f"Skipped malformed merged attribute {label!r}: "
@@ -508,13 +665,14 @@ def build_export_row(
             value_col, uom_col = alias
             if value_col in row and value_col not in consumed_logistics_cols:
                 row[value_col] = _format_value(fobj.value, nz)
-                unit = getattr(fobj, "unit", None)
+                unit = _safe_attribute_unit(fobj, label)
                 if uom_col and uom_col in row and unit:
                     row[uom_col] = _normalize_uom(unit, nz)
                 consumed_logistics_cols.add(value_col)
                 continue  # routed to a fixed column, not a generic slot
 
-        slot_items.append((label, fobj.value, getattr(fobj, "unit", None)))
+        unit = _safe_attribute_unit(fobj, label)
+        slot_items.append((label, fobj.value, unit))
 
     slot_numbers = _attribute_slot_numbers(headers)
     max_slots = len(slot_numbers)

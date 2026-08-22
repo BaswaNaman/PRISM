@@ -319,7 +319,39 @@ def _category_from_source(raw_text: str):
 _DYNAMIC_SKIP_LABELS = {
     "description", "features", "specifications", "unit price", "price",
     "quantity", "add to wishlist", "secure checkout", "secure payment",
+    "http", "https", "url", "source url", "product url",
+    "estimated arrival", "estimated arrival on", "arrival date",
+    "availability", "available", "ship to store", "shipping",
 }
+
+_DYNAMIC_NON_PRODUCT_KEYS = {
+    "http", "https", "url", "source_url", "product_url",
+    "estimated_arrival", "estimated_arrival_on", "arrival_date",
+    "availability", "available", "ship_to_store", "shipping",
+}
+
+
+def _sanitize_dynamic_unit(key: str, unit: Any, snippet: Any) -> Optional[str]:
+    """Keep a dynamic UOM consistent with its explicit evidence snippet."""
+    raw_unit = str(unit or "").strip()
+    if not raw_unit:
+        return None
+    unit_key = re.sub(r"[^a-z0-9]+", "_", raw_unit.lower()).strip("_")
+    if unit_key == key or unit_key in {"grit"}:
+        return None
+
+    evidence = str(snippet or "")
+    explicit_units = (
+        (r'(?:\b(?:inches|inch|in)\b|[\"″])', "in"),
+        (r"\bmm\b", "mm"), (r"\bcm\b", "cm"),
+        (r"\b(?:feet|foot|ft)\b", "ft"),
+        (r"\bkg\b", "kg"), (r"\b(?:lb|lbs)\b", "lb"),
+    )
+    found = [canonical for pattern, canonical in explicit_units
+             if re.search(pattern, evidence, flags=re.IGNORECASE)]
+    if len(found) == 1 and found[0].lower() != raw_unit.lower():
+        return found[0]
+    return raw_unit
 
 _DYNAMIC_LABEL_ALIASES = {
     "sku": "Manufacturer Part Number",
@@ -475,6 +507,7 @@ def extract_with_gemini_api(raw_text: str, api_key: str, max_retries: int = 3) -
             "'PRX-M18-30 Inductive Proximity Sensor'), NOT the document filename or a generic title. "
             "If you find critical technical specifications in the text that DO NOT fit into the primary requested fields "
             "(e.g., Thread Size, Flow Rate, Pressure Rating, Weight), extract them into the 'extra_attributes' array. "
+            "Extract only explicitly stated product features into the 'features' array; each feature must include verbatim source evidence. "
             "For every non-null extracted field, quote the EXACT source snippet from the text as evidence."
             + ANTI_INFERENCE_RULE
             + PROMPT_INJECTION_DEFENSE_RULE
@@ -515,7 +548,12 @@ def extract_with_gemini_api(raw_text: str, api_key: str, max_retries: int = 3) -
                         },
                         "required": ["attribute_name", "value", "confidence_score", "reasoning"]
                     }
-                }
+                },
+                "features": {
+                    "type": "ARRAY",
+                    "description": "Explicit product features supported by verbatim source evidence.",
+                    "items": field_schema
+                },
             },
             "required": list(FIELD_LABELS.keys())
         }
@@ -563,7 +601,8 @@ def extract_with_claude_api(raw_text: str, api_key: str) -> Optional[Dict[str, A
             "Extract the product_name as the actual product/model identifier, NOT the document "
             "filename or a generic title. "
             "If you find critical technical specifications in the text that DO NOT fit into the primary requested fields, "
-            "extract them into the 'extra_attributes' array."
+            "extract them into the 'extra_attributes' array. "
+            "Extract only explicitly stated product features into the 'features' array; each feature must include verbatim source evidence."
             + ANTI_INFERENCE_RULE
             + PROMPT_INJECTION_DEFENSE_RULE
         )
@@ -602,7 +641,12 @@ def extract_with_claude_api(raw_text: str, api_key: str) -> Optional[Dict[str, A
                             },
                             "required": ["attribute_name", "value", "confidence_score", "reasoning"]
                         }
-                    }
+                    },
+                    "features": {
+                        "type": "array",
+                        "description": "Explicit product features supported by verbatim source evidence.",
+                        "items": field_schema
+                    },
                 },
                 "required": list(FIELD_LABELS.keys())
             }
@@ -1129,14 +1173,29 @@ def process_raw_product_text(
         enriched_count = sum(1 for f in failure_fields if f.validation_status == "ai_enriched")
 
         return ProductIntelligenceRecord(
-            id=pid, raw_input=raw_text, input_mode=input_mode, source_origin=source_origin, fetch_metadata=meta,
-            product_name=fields["product_name"], category=fields["category"], voltage_rating=fields["voltage_rating"],
-            current_rating=fields["current_rating"], ip_rating=fields["ip_rating"], connector_type=fields["connector_type"],
-            operating_temperature_min=fields["operating_temperature_min"], operating_temperature_max=fields["operating_temperature_max"],
-            material=fields["material"], certifications=fields["certifications"], mounting_type=fields["mounting_type"],
-            extra_attributes={}, overall_confidence=0.0, overall_status="needs_review",
-            total_fields=len(failure_fields), verified_fields_count=verified_count,
-            flagged_fields_count=flagged_count, missing_fields_count=missing_count,
+            id=pid,
+            raw_input=raw_text,
+            input_mode=input_mode,
+            source_origin=source_origin,
+            fetch_metadata=meta,
+            product_name=fields["product_name"],
+            category=fields["category"],
+            voltage_rating=fields["voltage_rating"],
+            current_rating=fields["current_rating"],
+            ip_rating=fields["ip_rating"],
+            connector_type=fields["connector_type"],
+            operating_temperature_min=fields["operating_temperature_min"],
+            operating_temperature_max=fields["operating_temperature_max"],
+            material=fields["material"],
+            certifications=fields["certifications"],
+            mounting_type=fields["mounting_type"],
+            extra_attributes={},
+            features=[],
+            overall_status="needs_review",
+            total_fields=len(failure_fields),
+            verified_fields_count=verified_count,
+            flagged_fields_count=flagged_count,
+            missing_fields_count=missing_count,
             enriched_fields_count=enriched_count,
             created_at=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
@@ -1154,6 +1213,7 @@ def process_raw_product_text(
         extracted_data = extract_with_heuristics_fallback(raw_text, product_name_hint, category_hint)
 
     fields = {}
+    extra_fields={}
     for key, label in FIELD_LABELS.items():
         field_info = extracted_data.get(key, {})
         if not isinstance(field_info, dict): field_info = {}
@@ -1261,6 +1321,26 @@ def process_raw_product_text(
             validation_message=v_msg, is_reviewed=False
         )
 
+    # Features are publication-facing text, so accept only values backed by a
+    # verbatim source snippet and meeting the same confidence gate as verified
+    # fields. Ungrounded or low-confidence feature claims are dropped rather
+    # than turned into marketing copy.
+    features = []
+    extracted_features = extracted_data.get("features", [])
+    if isinstance(extracted_features, list):
+        for item in extracted_features:
+            if not isinstance(item, dict):
+                continue
+            value = item.get("value")
+            snippet = item.get("source_snippet")
+            try:
+                confidence = float(item.get("confidence_score", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                confidence = 0.0
+            text = str(value).strip() if value is not None else ""
+            if text and confidence >= 0.65 and verify_snippet_grounding(snippet, raw_text):
+                features.append(text)
+
     # 10/10 FEATURE: Parse Array Output back into Pydantic Dict dynamically
     extra_fields = {}
     extracted_extras = extracted_data.get("extra_attributes", [])
@@ -1279,6 +1359,8 @@ def process_raw_product_text(
             if isinstance(item, dict) and item.get("attribute_name") and item.get("value") is not None:
                 raw_key = str(item["attribute_name"])
                 ex_key = re.sub(r"[^a-z0-9]+", "_", raw_key.lower()).strip("_")
+                if ex_key in _DYNAMIC_NON_PRODUCT_KEYS:
+                    continue
                 
                 snippet = item.get("source_snippet")
                 field_origin = source_origin
@@ -1299,9 +1381,14 @@ def process_raw_product_text(
                 else:
                     ex_status = "flagged_ungrounded"
 
+                value = item.get("value")
+                if re.match(r"^https?://", str(value or "").strip(), flags=re.IGNORECASE):
+                    continue
+                unit = _sanitize_dynamic_unit(ex_key, item.get("unit"), snippet)
+
                 extra_fields[ex_key] = ExtractedField(
                     name=ex_key, label=raw_key.title(), value=item.get("value"),
-                    unit=item.get("unit"), source_snippet=snippet, is_grounded=grounded, source_type=source_type,
+                    unit=unit, source_snippet=snippet, is_grounded=grounded, source_type=source_type,
                     source_origin=field_origin, confidence_score=conf_score, reasoning=item.get("reasoning"),
                     validation_status=ex_status,
                     validation_message=(None if grounded else "Dynamic attribute could not be traced to source text; review required."),
@@ -1317,5 +1404,6 @@ def process_raw_product_text(
         current_rating=fields["current_rating"], ip_rating=fields["ip_rating"], connector_type=fields["connector_type"],
         operating_temperature_min=fields["operating_temperature_min"], operating_temperature_max=fields["operating_temperature_max"],
         material=fields["material"], certifications=fields["certifications"], mounting_type=fields["mounting_type"],
-        extra_attributes=extra_fields, created_at=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        extra_attributes=extra_fields, features=features,
+        created_at=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     )

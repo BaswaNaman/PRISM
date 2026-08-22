@@ -46,8 +46,9 @@ class _FakeClassification:
 
 class _FakeClassifier:
     """Stands in for unilog.classify.ItemTypeClassifier."""
-    def __init__(self, registry):
+    def __init__(self, registry, extra_types=None):
         self.registry = registry
+        self.extra_types = extra_types or []
 
     def classify(self, text):
         if "sensor" in text.lower():
@@ -89,7 +90,7 @@ class _FakeBridgeModule:
                 "Mobile Desc": {"text": "Test Mobile Description Text Here"},
                 "Product Title / Short Desc": {"text": "Test Product Title"},
                 "Long Description": {"text": "Test long description body."},
-                "Web / Online Desc": {"text": "Some prose that should NOT land in the row."},
+                "Web / Online Desc": {"text": "Grounded web description prose."},
             },
             "compliance": {},
             "trust_report": {},
@@ -238,17 +239,31 @@ def test_manufacturer_and_brand_only_set_when_supplied():
     assert result2.row["BRAND_NAME"] == "Turck®"
 
 
-def test_descriptions_reused_into_four_columns_web_desc_excluded():
+def test_known_manufacturer_and_brand_aliases_are_normalized_conservatively():
+    record = make_record()
+    result = uex.build_export_row(
+        record, manufacturer="Black & Decker/dewlt", brand="dewlt"
+    )
+    assert result.row["MANUFACTURER_NAME"] == "Stanley Black & Decker"
+    assert result.row["BRAND_NAME"] == "DEWALT"
+    assert any("normalized manufacturer" in warning for warning in result.warnings)
+
+    unknown = uex.build_export_row(
+        record, manufacturer="Example Industrial Co.", brand="Example"
+    )
+    assert unknown.row["MANUFACTURER_NAME"] == "Example Industrial Co."
+    assert unknown.row["BRAND_NAME"] == "Example"
+
+
+def test_all_five_descriptions_are_mapped_to_delivery_columns():
     record = make_record()
     result = uex.build_export_row(record)
     assert result.row["INVOICE_DESC"] == "TEST INVOICE LINE"
     assert result.row["MOBILE_DESC"] == "Test Mobile Description Text Here"
     assert result.row["SHORT_DESC"] == "Test Product Title"
     assert result.row["LONG_DESC1"] == "Test long description body."
-    # "Web / Online Desc" has no target column and must never appear anywhere.
-    assert "Some prose that should NOT land in the row." not in result.row.values()
+    assert result.row["MARKETING_DESCRIPTION"] == "Grounded web description prose."
     assert result.row["RETAIL_DESC"] == ""
-    assert result.row["MARKETING_DESCRIPTION"] == ""
 
 
 def test_classpath_splits_into_dept_class_fine():
@@ -258,6 +273,16 @@ def test_classpath_splits_into_dept_class_fine():
     assert result.row["Dept"] == "Industrial"
     assert result.row["Class"] == "Sensors"
     assert result.row["Fine"] == "Proximity Sensors"
+
+
+def test_verified_category_becomes_flat_classification_without_taxonomy():
+    record = make_record(product_name="DCLE34520GB", category="Cross Line Laser")
+    result = uex.build_export_row(record)
+    assert result.row["Classpath"] == "Cross Line Laser"
+    assert result.row["Class"] == "Cross Line Laser"
+    assert result.row["Dept"] == ""
+    assert result.row["Fine"] == ""
+    assert result.row["UNSPSC"] == ""
 
 
 # ---- MFR URL priority ------------------------------------------------------
@@ -389,6 +414,53 @@ def test_unpopulatable_columns_stay_blank_string_never_none():
     for col in ("PART_NUMBER", "E1_Brand", "ITEM_FEATURES_1", "UPC", "Warranty"):
         assert result.row[col] == ""
         assert result.row[col] is not None
+
+
+def test_item_features_require_verbatim_source_grounding():
+    record = make_record()
+    record.raw_input = "Explicit source feature"
+    record.features = ["Explicit source feature", "Invented marketing claim"]
+    result = uex.build_export_row(record)
+    assert result.row["ITEM_FEATURES_1"] == "Explicit source feature"
+    assert result.row["ITEM_FEATURES_2"] == ""
+    assert any("Skipped ungrounded feature" in warning for warning in result.warnings)
+
+
+def test_conflicting_runtime_features_are_withheld_for_review():
+    record = make_record()
+    first = "Runtime reaches 23 hours with 2 Ah battery"
+    second = "Runtime reaches 24 hours with 2.0 Ah battery"
+    safe = "Integrated magnetic mounting"
+    record.raw_input = f"{first} {second} {safe}"
+    record.features = [first, second, safe]
+    result = uex.build_export_row(record)
+    assert result.row["ITEM_FEATURES_1"] == safe
+    assert result.row["ITEM_FEATURES_2"] == ""
+    assert sum("Skipped conflicting runtime feature" in w for w in result.warnings) == 2
+
+
+def test_operational_metadata_is_not_exported_as_an_attribute():
+    record = make_record(extra_attributes={
+        "https": make_field("//example.test/product", label="Https", status="verified"),
+        "estimated_arrival_on": make_field("08/27/2026", label="Estimated Arrival On", status="verified"),
+    })
+    result = uex.build_export_row(record)
+    labels = [result.row[f"ATTRIBUTE_LABEL {i}"] for i in range(1, 51)]
+    assert "Https" not in labels
+    assert "Estimated Arrival On" not in labels
+
+
+def test_dynamic_unit_uses_explicit_evidence_and_avoids_label_duplication():
+    length = make_field(18, "mm", label="Length", status="verified")
+    length.source_snippet = "18 in L"
+    grit = make_field("50, 80, 120", "Grit", label="Grit", status="verified")
+    grit.source_snippet = "50, 80, 120 Grit"
+    record = make_record(extra_attributes={"length": length, "grit": grit})
+    result = uex.build_export_row(record)
+    assert result.row["LENGTH"] == "18"
+    assert result.row["LENGTH_UOM"] == "in"
+    grit_slot = next(i for i in range(1, 51) if result.row[f"ATTRIBUTE_LABEL {i}"] == "Grit")
+    assert result.row[f"ATTRIBUTE_UOM {grit_slot}"] == ""
 
 
 def test_every_header_present_in_row_even_if_blank():

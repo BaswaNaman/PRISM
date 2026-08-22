@@ -59,7 +59,7 @@
         <div class="kpi-icon icon-blue"><i class="fa-solid fa-boxes-stacked"></i></div>
         <div class="kpi-info">
           <span class="kpi-value" id="kpi-total-products">0</span>
-          <span class="kpi-label">Processed Products</span>
+          <span class="kpi-label">Products Processed</span>
         </div>
       </div>
 
@@ -67,7 +67,7 @@
         <div class="kpi-icon icon-green"><i class="fa-solid fa-shield-check"></i></div>
         <div class="kpi-info">
           <span class="kpi-value" id="kpi-verification-rate">0%</span>
-          <span class="kpi-label">Verification Accuracy</span>
+          <span class="kpi-label">Field Verification Rate</span>
         </div>
       </div>
 
@@ -83,7 +83,7 @@
         <div class="kpi-icon icon-purple"><i class="fa-solid fa-bolt"></i></div>
         <div class="kpi-info">
           <span class="kpi-value" id="kpi-time-saved">0 hrs</span>
-          <span class="kpi-label">Manual Effort Saved</span>
+          <span class="kpi-label" title="Estimated at 15 minutes saved per processed product">Estimated Manual Time Saved</span>
         </div>
       </div>
     </section>
@@ -100,7 +100,7 @@
         <i class="fa-solid fa-table-list"></i> 3. Product Catalog
       </button>
       <button class="tab-btn" data-tab="tab-commerce">
-        <i class="fa-solid fa-file-invoice"></i> 4. Commerce Output & Compliance
+        <i class="fa-solid fa-file-invoice"></i> 4. Commerce Output & Readiness
       </button>
       <button class="tab-btn" data-tab="tab-rules">
         <i class="fa-solid fa-microchip"></i> 5. Validation Rules & Schema
@@ -142,7 +142,7 @@
               <label for="url-input-text">Enter Live Product Webpage URL:</label>
               <div class="input-with-icon">
                 <i class="fa-solid fa-link input-icon"></i>
-                <input type="url" id="url-input-text" placeholder="https://www.automationdirect.com/adc/shopping/catalog/sensors..." />
+                <input type="url" id="url-input-text" placeholder="https://manufacturer.example/products/model-number" />
               </div>
             </div>
 
@@ -222,12 +222,9 @@
               <input type="text" id="product-name-hint" placeholder="e.g. M12 4-Pin Male Connector" />
             </div>
             <div class="form-group flex-1">
-              <label for="category-hint">Category Scope:</label>
-              <select id="category-hint">
-                <option value="Industrial Connector">Industrial Connector</option>
-                <option value="Industrial Sensor">Industrial Sensor</option>
-                <option value="Auto-Detect">Auto-Detect Category</option>
-              </select>
+              <label for="category-hint">Category Hint (Optional):</label>
+              <input type="text" id="category-hint"
+                     placeholder="Leave blank for auto-detection" />
             </div>
           </div>
 
@@ -240,10 +237,10 @@
 
           <!-- Pipeline Progress Animation -->
           <div class="pipeline-progress hidden" id="pipeline-progress">
-            <div class="stage stage-1 active"><i class="fa-solid fa-spinner fa-spin"></i> 1. Fetching & Parsing Source (Web Browser Request)</div>
+            <div class="stage stage-1 active"><i class="fa-solid fa-spinner fa-spin"></i> 1. Secure Source Retrieval & Parsing</div>
             <div class="stage stage-2"><i class="fa-solid fa-spinner fa-spin"></i> 2. AI Structured Extraction</div>
             <div class="stage stage-3"><i class="fa-solid fa-spinner fa-spin"></i> 3. Deterministic Unit Normalization & Rules</div>
-            <div class="stage stage-4"><i class="fa-solid fa-spinner fa-spin"></i> 4. Multi-Source Evidence & Explainability Indexing</div>
+            <div class="stage stage-4"><i class="fa-solid fa-spinner fa-spin"></i> 4. Field-Level Evidence & Provenance Indexing</div>
           </div>
         </div>
 
@@ -420,50 +417,50 @@
       </div>
     </section>
 
-    <!-- TAB 4: COMMERCE OUTPUT & UNILOG COMPLIANCE -->
+    <!-- TAB 4: COMMERCE OUTPUT & UNILOG READINESS -->
     <section class="tab-content" id="tab-commerce">
       <div class="section-header">
         <div>
-          <h2><i class="fa-solid fa-file-invoice"></i> Commerce Output &amp; Unilog Compliance</h2>
-          <p>The catalogue rewritten into the five required description formats, scored against the
-             content guidelines. Only values that passed the trust gate are allowed into a description —
-             an invented specification scores zero, so withholding is the higher-scoring behaviour.</p>
+          <h2><i class="fa-solid fa-file-invoice"></i> Commerce Output &amp; Unilog Readiness</h2>
+          <p>PRISM generates five commerce-description formats from trust-gated product data and maps
+             all five into the 252-column delivery schema. Unsupported claims are
+             withheld rather than converted into fluent but unreliable catalogue content.</p>
         </div>
         <div class="header-actions">
           <button class="btn btn-primary" id="commerce-refresh-btn">
-            <i class="fa-solid fa-rotate"></i> Run Compliance Report
+            <i class="fa-solid fa-rotate"></i> Run Readiness Report
           </button>
         </div>
       </div>
 
-      <!-- Compliance KPIs -->
+      <!-- Readiness KPIs -->
       <section class="kpi-banner">
         <div class="kpi-card">
           <div class="kpi-icon icon-blue"><i class="fa-solid fa-ruler-horizontal"></i></div>
           <div class="kpi-info">
             <span class="kpi-value" id="cmp-charlimit">—</span>
-            <span class="kpi-label">Char-Limit Compliance</span>
+            <span class="kpi-label">Character-Limit Checks</span>
           </div>
         </div>
         <div class="kpi-card">
           <div class="kpi-icon icon-green"><i class="fa-solid fa-list-check"></i></div>
           <div class="kpi-info">
             <span class="kpi-value" id="cmp-lov">—</span>
-            <span class="kpi-label">LOV Compliance</span>
+            <span class="kpi-label">LOV Validation Status</span>
           </div>
         </div>
         <div class="kpi-card">
           <div class="kpi-icon icon-purple"><i class="fa-solid fa-sitemap"></i></div>
           <div class="kpi-info">
             <span class="kpi-value" id="cmp-classification">—</span>
-            <span class="kpi-label">Item Type Resolved</span>
+            <span class="kpi-label">Item Type Resolution</span>
           </div>
         </div>
         <div class="kpi-card">
           <div class="kpi-icon icon-amber"><i class="fa-solid fa-shield-halved"></i></div>
           <div class="kpi-info">
             <span class="kpi-value" id="cmp-trustgate">—</span>
-            <span class="kpi-label">Passed Trust Gate</span>
+            <span class="kpi-label">Trust-Gate Publication Rate</span>
           </div>
         </div>
       </section>
@@ -479,7 +476,7 @@
             <span id="cmp-lov-warning-text"></span>
           </div>
           <ul class="rule-list" id="cmp-context-list">
-            <li>Click <strong>Run Compliance Report</strong> to score the catalogue.</li>
+            <li>Click <strong>Run Readiness Report</strong> to evaluate the current catalogue.</li>
           </ul>
         </div>
       </div>
@@ -492,7 +489,9 @@
         </div>
         <div class="panel-body">
           <p class="rule-note" id="cmp-sourcing-desc">
-            The content guidelines- Manufacturer sources are preferred. Verified distributor sources may be used with review flags when manufacturer data is unavailable. Marketplaces, forums, and community sources remain excluded..
+            Manufacturer sources are preferred. Under the active policy, corroborated distributor
+            sources may be accepted with review flags. Marketplaces, encyclopedias, forums, and
+            community-authored sources are not promoted to trusted product evidence.
           </p>
           <div class="input-row">
             <input type="url" id="cmp-sourcing-url" placeholder="Paste any product URL to classify it without fetching…" />
@@ -514,7 +513,7 @@
           <div id="cmp-products-container">
             <div class="empty-state">
               <i class="fa-solid fa-file-lines"></i>
-              <p>No report yet. Run the compliance report to generate the five description formats
+              <p>No report yet. Run the readiness report to generate the five description formats
                  for every product in the catalogue.</p>
             </div>
           </div>
@@ -527,16 +526,17 @@
       <div class="section-header">
         <div>
           <h2><i class="fa-solid fa-microchip"></i> Multi-Source Ingestion & Validation Specs</h2>
-          <p>Explaining how PRISM ingests Web, PDF, and Text sources with complete explainability traces.</p>
+          <p>How PRISM ingests Web, PDF, and Text sources while retaining field-level provenance,
+             verbatim evidence, validation status, and review routing.</p>
         </div>
       </div>
 
       <div class="rules-grid">
         <div class="rule-card">
-          <div class="rule-header"><i class="fa-solid fa-globe icon-blue"></i> 1. Real Browser Web Ingestion</div>
-          <p>Fetches live manufacturer web pages via <code>httpx</code> & BeautifulSoup:</p>
+          <div class="rule-header"><i class="fa-solid fa-globe icon-blue"></i> 1. Secure Web Ingestion</div>
+          <p>Retrieves permitted product pages through SSRF-safe <code>httpx</code> requests and parses them with BeautifulSoup:</p>
           <ul class="rule-list">
-            <li>Uses full Chrome/Chromium User-Agent & Accept headers</li>
+            <li>Uses browser-compatible request headers with bounded response handling</li>
             <li>Strips navigation, footers, ad blocks, and boilerplate scripts</li>
             <li>Exposes HTTP status codes and raw text length preview in UI</li>
           </ul>
@@ -565,30 +565,31 @@
         <div class="rule-card">
           <div class="rule-header"><i class="fa-solid fa-magnifying-glass-chart icon-purple"></i> 4. Multi-Source Traceability</div>
           <ul class="rule-list">
-            <li><strong>Origin Tagging:</strong> Explicitly marks field sources (e.g. <code>URL: automationdirect.com</code>)</li>
+            <li><strong>Origin Tagging:</strong> Explicitly marks the domain supporting each extracted field</li>
             <li><strong>Verbatim Quotes:</strong> Displays exact source snippet evidence in quote inspector</li>
             <li><strong>Raw Text Preview:</strong> One-click inspector showing raw scraped content</li>
           </ul>
         </div>
 
         <div class="rule-card">
-          <div class="rule-header"><i class="fa-solid fa-filter-circle-xmark icon-amber"></i> 5. Sourcing Rules (Manufacturer-Only)</div>
-          <p>The guidelines require manufacturer sources. The gate runs <em>before</em> the request:</p>
+          <div class="rule-header"><i class="fa-solid fa-filter-circle-xmark icon-amber"></i> 5. Source Policy &amp; Identity Verification</div>
+          <p>The active source policy is evaluated before retrieval, and product identity is checked before evidence is accepted:</p>
           <ul class="rule-list">
-            <li><strong>Rejected:</strong> marketplaces (seller-authored specs), distributors (re-mapped units), encyclopedias (category articles, not parts), forums</li>
-            <li><strong>Permitted but flagged:</strong> unrecognised domains — allowed, but not positively verified as the manufacturer</li>
+            <li><strong>Preferred:</strong> manufacturer sources with exact MPN and brand/manufacturer corroboration</li>
+            <li><strong>Policy-dependent:</strong> verified distributor sources may be accepted and flagged under <code>allow_distributors</code></li>
+            <li><strong>Rejected as trusted evidence:</strong> marketplaces, encyclopedias, forums, and community-authored sources</li>
             <li><strong>Strict mode:</strong> a <code>data/approved_domains.txt</code> allow-list overrides the category rules entirely</li>
           </ul>
         </div>
 
         <div class="rule-card">
-          <div class="rule-header"><i class="fa-solid fa-file-invoice icon-green"></i> 6. Commerce Output Compliance</div>
-          <p>Five description formats built from trust-gated values only:</p>
+          <div class="rule-header"><i class="fa-solid fa-file-invoice icon-green"></i> 6. Commerce Output Readiness</div>
+          <p>Five description formats are built from trust-gated values and mapped into the delivery schema:</p>
           <ul class="rule-list">
             <li><strong>Invoice:</strong> ≤40 chars, ALL CAPS, approved abbreviations</li>
             <li><strong>Mobile:</strong> 60–80 chars · <strong>Title:</strong> ≤200 · <strong>Long:</strong> ≤1000 · <strong>Web:</strong> prose</li>
             <li><strong>Units:</strong> approved abbreviation with a mandatory space; decimal inches rendered as trade fractions (0.375 → 3/8 in)</li>
-            <li><strong>LOV:</strong> every enumerated value checked against the controlled vocabulary, with the approved spelling adopted</li>
+            <li><strong>LOV:</strong> validation runs when an approved vocabulary is loaded; otherwise conformance is reported as unavailable rather than assumed</li>
           </ul>
         </div>
       </div>
@@ -660,6 +661,6 @@
     </div>
   </aside>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=prism-export-v2"></script>
 </body>
 </html>

@@ -106,6 +106,78 @@ def _run_checks():
     check("build_from_prism carries the trust report",
           full["trust_report"]["attributes_withheld"] == 4, full["trust_report"])
 
+    identity_record = dict(record)
+    identity_record["extra_attributes"] = {
+        "model_number": field("DCB518ASTS06G"),
+        "upc": field("008925172550"),
+        "manufacturer_part_number": field("7872492 UPC 008925172550"),
+        "grit_options": field("50, 80 and 120"),
+    }
+    identity_descriptions = bridge.build_from_prism(
+        identity_record, brand="Diablo", mpn="DCB518ASTS06G",
+        item_type="Sanding Belt",
+    )["descriptions"]
+    identity_text = " ".join(v["text"] for v in identity_descriptions.values())
+    check("MPN remains intact in descriptions",
+          "DCB518ASTS06G" in identity_text and "DCB518ASTS06 g" not in identity_text,
+          identity_text)
+    check("UPC and contaminated identifiers stay out of descriptions",
+          "008925172550" not in identity_text and "7872492" not in identity_text,
+          identity_text)
+    check("non-identity dynamic attributes remain available to descriptions",
+          "50, 80 and 120" in identity_text, identity_text)
+
+    metadata_record = dict(record)
+    metadata_record["extra_attributes"] = {
+        "https": field("https://example.test/product"),
+        "estimated_arrival_on": field("08/27/2026"),
+        "length": field("18", unit="mm"),
+        "grit": field("50, 80, 120", unit="Grit"),
+    }
+    metadata_record["extra_attributes"]["length"]["source_snippet"] = "18 in L"
+    metadata_text = " ".join(
+        v["text"] for v in bridge.build_from_prism(
+            metadata_record, brand="Diablo", mpn="DCB518ASTS06G",
+            item_type="Sanding Belt",
+        )["descriptions"].values()
+    )
+    check("URLs and arrival dates stay out of descriptions",
+          "example.test" not in metadata_text and "08/27/2026" not in metadata_text,
+          metadata_text)
+    check("evidence unit corrects a mismatched extracted dimension",
+          "18 in" in metadata_text and "18 mm" not in metadata_text, metadata_text)
+    check("semantic labels are not duplicated as units",
+          "Grit Grit" not in metadata_text, metadata_text)
+
+    grit_record = desc.ProductRecord(
+        brand="Mirka", mpn="5B-332-080", item_type="Sanding Disc",
+        attributes=[desc.Attribute("Grit", "80G")],
+    )
+    grit_text = " ".join(
+        value["text"] for value in desc.build_all_descriptions(grit_record, uom.DEFAULT).values()
+    )
+    check("abrasive grit suffix is not converted to grams",
+          "80G" in grit_text and "80 g" not in grit_text, grit_text)
+
+    duplicate_record = dict(record)
+    duplicate_record["material"] = field("Cloth")
+    duplicate_record["mounting_type"] = field("Peel & Stick")
+    duplicate_record["extra_attributes"] = {
+        "abrasive_backing": field("Cloth"),
+        "adhesion_type": field("Peel & Stick"),
+        "brand_compatibility": field("Mirka"),
+    }
+    deduped, _ = bridge.to_product_record(
+        duplicate_record, brand="Mirka", mpn="5B-332-080",
+        item_type="Sanding Disc",
+    )
+    deduped_values = [str(a.value) for a in deduped.attributes]
+    check("equivalent dynamic description values are deduplicated",
+          deduped_values.count("Cloth") == 1 and deduped_values.count("Peel & Stick") == 1,
+          deduped_values)
+    check("identity values are not repeated as description attributes",
+          "Mirka" not in deduped_values, deduped_values)
+
     empty_rec, empty_report = bridge.to_product_record({"product_name": field("Widget")})
     check("absent fields are not reported as withheld", empty_report.withheld_count == 0,
           empty_report.withheld)
